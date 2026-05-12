@@ -3,6 +3,9 @@ import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import crypto from 'crypto';
 
+// 强制动态渲染，避免构建时收集页面数据
+export const dynamic = 'force-dynamic';
+
 // 验证schema
 const paySchema = z.object({
   sessionId: z.string(),

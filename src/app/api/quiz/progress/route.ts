@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
+// 强制动态渲染，避免构建时收集页面数据
+export const dynamic = 'force-dynamic';
+
 // 验证schema
 const updateProgressSchema = z.object({
   sessionId: z.string(),

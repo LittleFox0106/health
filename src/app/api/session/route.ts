@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
 
+// 强制动态渲染，避免构建时收集页面数据
+export const dynamic = 'force-dynamic';
+
 // 生成唯一的session ID
 function generateSessionId(): string {
   return 'sess_' + crypto.randomBytes(16).toString('hex');

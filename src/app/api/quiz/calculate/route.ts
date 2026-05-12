@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calculateHealthMetrics, getBMICategory, UserData } from '@/lib/calculator';
+
+// 强制动态渲染，避免构建时收集页面数据
+export const dynamic = 'force-dynamic';
 import { z } from 'zod';
 
 // 验证schema

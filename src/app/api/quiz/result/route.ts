@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { getBMICategory, generateProgressCurve } from '@/lib/calculator';
 
 // 强制动态渲染，避免构建时收集页面数据
@@ -8,6 +7,9 @@ export const dynamic = 'force-dynamic';
 // GET /api/quiz/result?sessionId=xxx - 获取结果（带权限校验）
 export async function GET(request: NextRequest) {
   try {
+    // 动态导入prisma，避免构建时加载
+    const { prisma } = await import('@/lib/prisma');
+    
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get('sessionId');
 

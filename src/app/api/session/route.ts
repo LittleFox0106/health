@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
 
 // 强制动态渲染，避免构建时收集页面数据
@@ -13,6 +12,9 @@ function generateSessionId(): string {
 // POST /api/session - 创建新用户会话
 export async function POST() {
   try {
+    // 动态导入prisma，避免构建时加载
+    const { prisma } = await import('@/lib/prisma');
+    
     const sessionId = generateSessionId();
     
     // 创建用户和关联的quiz session、subscription

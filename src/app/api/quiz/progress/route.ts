@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 
 // 强制动态渲染，避免构建时收集页面数据
 export const dynamic = 'force-dynamic';
@@ -7,6 +6,9 @@ export const dynamic = 'force-dynamic';
 // GET /api/quiz/progress?sessionId=xxx - 获取进度
 export async function GET(request: NextRequest) {
   try {
+    // 动态导入prisma，避免构建时加载
+    const { prisma } = await import('@/lib/prisma');
+    
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get('sessionId');
 
@@ -59,6 +61,9 @@ export async function GET(request: NextRequest) {
 // PUT /api/quiz/progress - 更新进度
 export async function PUT(request: NextRequest) {
   try {
+    // 动态导入prisma，避免构建时加载
+    const { prisma } = await import('@/lib/prisma');
+    
     const body = await request.json();
     const { sessionId, step, data } = body;
 

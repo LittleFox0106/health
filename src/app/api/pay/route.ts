@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
 
 // 强制动态渲染，避免构建时收集页面数据
@@ -43,6 +42,9 @@ function calculateExpiryDate(planType: string): Date {
 // POST /api/pay - 模拟支付回调
 export async function POST(request: NextRequest) {
   try {
+    // 动态导入prisma，避免构建时加载
+    const { prisma } = await import('@/lib/prisma');
+    
     const body: PayRequestBody = await request.json();
 
     if (!body.sessionId || !body.planType || !body.amount) {

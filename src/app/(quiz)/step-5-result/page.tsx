@@ -149,17 +149,50 @@ export default function Step5Result() {
         {/* 进度曲线 */}
         <div className="bg-white rounded-2xl p-6 shadow-lg">
           <h3 className="text-lg font-semibold text-gray-700 mb-4">目标进度预测</h3>
-          <div className="flex items-end justify-between h-40 px-4">
-            {fullReport.progressCurve.slice(0, 6).map((point, index) => (
-              <div key={index} className="flex flex-col items-center">
-                <div
-                  className="w-8 bg-blue-500 rounded-t"
-                  style={{ height: `${50 + (index / 5) * 100}%` }}
-                ></div>
-                <div className="text-xs text-gray-500 mt-2">第{point.day}天</div>
+          {fullReport.progressCurve && fullReport.progressCurve.length > 0 ? (
+            <div className="space-y-1">
+              {/* Y轴标签和柱状图 */}
+              <div className="flex items-end justify-between h-48 px-2">
+                {fullReport.progressCurve.map((point, index) => {
+                  // 基于实际体重数据计算柱状图高度
+                  const allWeights = fullReport.progressCurve.map(p => p.weight);
+                  const minWeight = Math.min(...allWeights);
+                  const maxWeight = Math.max(...allWeights);
+                  const range = maxWeight - minWeight || 1;
+                  const heightPercent = 20 + ((point.weight - minWeight) / range) * 70;
+
+                  return (
+                    <div key={index} className="flex flex-col items-center flex-1">
+                      {/* 体重标签 */}
+                      <div className="text-xs text-gray-500 mb-1">
+                        {point.weight.toFixed(1)}
+                      </div>
+                      {/* 柱状图 */}
+                      <div
+                        className="w-full max-w-[40px] bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-md transition-all duration-300"
+                        style={{ height: `${heightPercent}%` }}
+                      ></div>
+                      {/* 日期标签 */}
+                      <div className="text-xs text-gray-400 mt-2 text-center">
+                        {point.day <= 7 ? `第${point.day}天` : 
+                         point.day <= 30 ? `${Math.floor(point.day / 7)}周` : 
+                         `${Math.floor(point.day / 30)}月`}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            ))}
-          </div>
+              {/* 图例 */}
+              <div className="flex items-center justify-center space-x-4 mt-4 pt-3 border-t border-gray-100">
+                <div className="flex items-center space-x-1.5">
+                  <div className="w-3 h-3 rounded-sm bg-gradient-to-t from-blue-500 to-blue-400"></div>
+                  <span className="text-xs text-gray-500">体重变化 (kg)</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-gray-400 text-center py-8">暂无进度数据</p>
+          )}
         </div>
 
         {/* 个性化建议 */}

@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { z } from 'zod';
 import crypto from 'crypto';
 
 // 强制动态渲染，避免构建时收集页面数据
 export const dynamic = 'force-dynamic';
 
-// 验证schema
-const paySchema = z.object({
-  sessionId: z.string(),
-  planType: z.enum(['monthly', 'yearly', 'lifetime']),
-  amount: z.number().positive(),
-});
+type PlanType = 'monthly' | 'yearly' | 'lifetime';
+
+interface PayRequestBody {
+  sessionId: string;
+  planType: PlanType;
+  amount: number;
+}
 
 // 生成支付ID
 function generatePaymentId(): string {
@@ -43,17 +43,16 @@ function calculateExpiryDate(planType: string): Date {
 // POST /api/pay - 模拟支付回调
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const validation = paySchema.safeParse(body);
+    const body: PayRequestBody = await request.json();
 
-    if (!validation.success) {
+    if (!body.sessionId || !body.planType || !body.amount) {
       return NextResponse.json(
-        { success: false, error: 'Invalid request data', details: validation.error },
+        { success: false, error: 'Missing required fields: sessionId, planType, amount' },
         { status: 400 }
       );
     }
 
-    const { sessionId, planType, amount } = validation.data;
+    const { sessionId, planType, amount } = body;
 
     // 获取用户
     const user = await prisma.user.findUnique({
@@ -120,9 +119,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-// 防止GET请求导致构建错误
-export async function GET() {
-  return NextResponse.json({ error: 'Method not allowed' }, { status: 405 });
 }

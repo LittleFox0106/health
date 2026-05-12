@@ -1,16 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { z } from 'zod';
 
 // 强制动态渲染，避免构建时收集页面数据
 export const dynamic = 'force-dynamic';
-
-// 验证schema
-const updateProgressSchema = z.object({
-  sessionId: z.string(),
-  step: z.number().min(1).max(5),
-  data: z.record(z.string(), z.unknown()),
-});
 
 // GET /api/quiz/progress?sessionId=xxx - 获取进度
 export async function GET(request: NextRequest) {
@@ -27,9 +19,7 @@ export async function GET(request: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { sessionId },
-      include: {
-        quizSession: true,
-      },
+      include: { quizSession: true },
     });
 
     if (!user || !user.quizSession) {
@@ -70,16 +60,14 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const validation = updateProgressSchema.safeParse(body);
+    const { sessionId, step, data } = body;
 
-    if (!validation.success) {
+    if (!sessionId || !step || !data) {
       return NextResponse.json(
-        { success: false, error: 'Invalid request data', details: validation.error },
+        { success: false, error: 'Missing required fields' },
         { status: 400 }
       );
     }
-
-    const { sessionId, step, data } = validation.data;
 
     const user = await prisma.user.findUnique({
       where: { sessionId },

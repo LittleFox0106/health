@@ -4,30 +4,21 @@ import { calculateHealthMetrics, getBMICategory, UserData } from '@/lib/calculat
 
 // 强制动态渲染，避免构建时收集页面数据
 export const dynamic = 'force-dynamic';
-import { z } from 'zod';
 
-// 验证schema
-const calculateSchema = z.object({
-  sessionId: z.string(),
-  data: z.object({
-    exerciseFreq: z.enum(['sedentary', 'light', 'moderate', 'active', 'very_active']),
-  }),
-});
+type ExerciseFreq = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
 
 // POST /api/quiz/calculate - 提交并计算结果
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const validation = calculateSchema.safeParse(body);
+    const { sessionId, data } = body;
 
-    if (!validation.success) {
+    if (!sessionId || !data || !data.exerciseFreq) {
       return NextResponse.json(
-        { success: false, error: 'Invalid request data', details: validation.error },
+        { success: false, error: 'Missing required fields' },
         { status: 400 }
       );
     }
-
-    const { sessionId, data } = validation.data;
 
     // 获取用户和测评数据
     const user = await prisma.user.findUnique({
@@ -63,7 +54,7 @@ export async function POST(request: NextRequest) {
       height: quizSession.height,
       weight: quizSession.weight,
       targetWeight: quizSession.targetWeight,
-      exerciseFreq: data.exerciseFreq,
+      exerciseFreq: data.exerciseFreq as ExerciseFreq,
       goal: quizSession.goal as 'lose_weight' | 'build_muscle' | 'maintain',
     };
 

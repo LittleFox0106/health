@@ -1,0 +1,85 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// 用户表 - 基于匿名Session
+model User {
+  id          String   @id @default(uuid())
+  sessionId   String   @unique @map("session_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  // 关联
+  quizSession QuizSession?
+  subscription Subscription?
+  
+  @@map("users")
+}
+
+// 测评会话表 - 存储所有测评数据
+model QuizSession {
+  id            String    @id @default(uuid())
+  userId        String    @unique @map("user_id")
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // 进度追踪
+  currentStep   Int       @default(1) @map("current_step") // 1-5
+  isCompleted   Boolean   @default(false) @map("is_completed")
+  
+  // 基础信息 (Step 1)
+  gender        String?   // "male" | "female"
+  
+  // 目标 (Step 2)
+  goal          String?   // "lose_weight" | "build_muscle" | "maintain"
+  
+  // 身体数据 (Step 3)
+  age           Int?
+  height        Int?      // cm
+  weight        Float?    // kg
+  targetWeight  Float?    @map("target_weight")
+  
+  // 运动频率 (Step 4)
+  exerciseFreq  String?   @map("exercise_freq") // "sedentary" | "light" | "moderate" | "active" | "very_active"
+  
+  // 计算结果 (Step 5完成后)
+  bmi           Float?
+  dailyCalories Int?      @map("daily_calories")
+  targetDate    DateTime? @map("target_date")
+  
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  
+  @@map("quiz_sessions")
+}
+
+// 订阅表 - 会员状态管理
+model Subscription {
+  id          String   @id @default(uuid())
+  userId      String   @unique @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  status      String   @default("inactive") // "inactive" | "active" | "expired" | "cancelled"
+  planType    String?  @map("plan_type")    // "monthly" | "yearly" | "lifetime"
+  
+  startedAt   DateTime? @map("started_at")
+  expiresAt   DateTime? @map("expires_at")
+  
+  // 支付相关
+  paymentId   String?  @map("payment_id")   // 模拟支付ID
+  paidAmount  Float?   @map("paid_amount")
+  paidAt      DateTime? @map("paid_at")
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  @@map("subscriptions")
+}

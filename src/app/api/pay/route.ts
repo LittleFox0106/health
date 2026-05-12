@@ -1,0 +1,126 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
+import crypto from 'crypto';
+
+// 验证schema
+const paySchema = z.object({
+  sessionId: z.string(),
+  planType: z.enum(['monthly', 'yearly', 'lifetime']),
+  amount: z.number().positive(),
+});
+
+// 生成支付ID
+function generatePaymentId(): string {
+  return 'pay_' + crypto.randomBytes(16).toString('hex');
+}
+
+// 计算订阅到期时间
+function calculateExpiryDate(planType: string): Date {
+  const now = new Date();
+  const expiry = new Date(now);
+  
+  switch (planType) {
+    case 'monthly':
+      expiry.setMonth(expiry.getMonth() + 1);
+      break;
+    case 'yearly':
+      expiry.setFullYear(expiry.getFullYear() + 1);
+      break;
+    case 'lifetime':
+      // 终身会员，设置一个遥远的未来日期
+      expiry.setFullYear(expiry.getFullYear() + 100);
+      break;
+    default:
+      expiry.setMonth(expiry.getMonth() + 1);
+  }
+  
+  return expiry;
+}
+
+// POST /api/pay - 模拟支付回调
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const validation = paySchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid request data', details: validation.error },
+        { status: 400 }
+      );
+    }
+
+    const { sessionId, planType, amount } = validation.data;
+
+    // 获取用户
+    const user = await prisma.user.findUnique({
+      where: { sessionId },
+      include: { subscription: true },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // 生成支付ID
+    const paymentId = generatePaymentId();
+    const now = new Date();
+    const expiresAt = calculateExpiryDate(planType);
+
+    // 更新或创建订阅
+    let subscription;
+    if (user.subscription) {
+      // 更新现有订阅
+      subscription = await prisma.subscription.update({
+        where: { userId: user.id },
+        data: {
+          status: 'active',
+          planType,
+          startedAt: now,
+          expiresAt,
+          paymentId,
+          paidAmount: amount,
+          paidAt: now,
+        },
+      });
+    } else {
+      // 创建新订阅
+      subscription = await prisma.subscription.create({
+        data: {
+          userId: user.id,
+          status: 'active',
+          planType,
+          startedAt: now,
+          expiresAt,
+          paymentId,
+          paidAmount: amount,
+          paidAt: now,
+        },
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        paymentId,
+        status: 'success',
+        subscription: {
+          status: subscription.status,
+          planType: subscription.planType,
+          startedAt: subscription.startedAt?.toISOString(),
+          expiresAt: subscription.expiresAt?.toISOString(),
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Payment failed:', error);
+    return NextResponse.json(
+      { success: false, error: 'Payment processing failed' },
+      { status: 500 }
+    );
+  }
+}

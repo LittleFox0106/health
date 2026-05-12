@@ -53,7 +53,7 @@ export async function POST(request: Request) {
       data: {
         email,
         password: hashedPassword,
-        user: {
+        users: {
           create: {
             sessionId: generateSessionId(),
             quizSession: {

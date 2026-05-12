@@ -30,7 +30,7 @@ export default function Step5Result() {
       lifetime: 499.99,
     };
     
-    const success = await pay(selectedPlan as any, amounts[selectedPlan]);
+    const success = await pay(selectedPlan as 'monthly' | 'yearly' | 'lifetime', amounts[selectedPlan]);
     if (success) {
       setIsPaid(true);
     }

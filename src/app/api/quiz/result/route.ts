@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBMICategory, generateProgressCurve } from '@/lib/calculator';
+import { isValidSessionId } from '@/lib/validators';
 
 // 强制动态渲染，避免构建时收集页面数据
 export const dynamic = 'force-dynamic';
@@ -9,13 +10,13 @@ export async function GET(request: NextRequest) {
   try {
     // 动态导入prisma，避免构建时加载
     const { prisma } = await import('@/lib/prisma');
-    
+
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get('sessionId');
 
-    if (!sessionId) {
+    if (!sessionId || !isValidSessionId(sessionId)) {
       return NextResponse.json(
-        { success: false, error: 'Session ID is required' },
+        { success: false, error: 'Session ID 格式无效' },
         { status: 400 }
       );
     }
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
 
     if (!user || !user.quizSession) {
       return NextResponse.json(
-        { success: false, error: 'Session not found' },
+        { success: false, error: '会话不存在' },
         { status: 404 }
       );
     }
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
     // 检查是否已完成测评
     if (!quizSession.isCompleted) {
       return NextResponse.json(
-        { success: false, error: 'Quiz not completed' },
+        { success: false, error: '测评尚未完成' },
         { status: 400 }
       );
     }
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 会员：返回完整数据
-    const daysToGoal = quizSession.targetDate 
+    const daysToGoal = quizSession.targetDate
       ? Math.ceil((quizSession.targetDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
       : 0;
 
@@ -107,7 +108,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Failed to get result:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to get result' },
+      { success: false, error: '获取结果失败' },
       { status: 500 }
     );
   }
@@ -117,7 +118,7 @@ export async function GET(request: NextRequest) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function generateRecommendations(quizSession: Record<string, unknown>): string[] {
   const recommendations: string[] = [];
-  
+
   if (!quizSession) return recommendations;
 
   // 基于BMI的建议

@@ -11,6 +11,38 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum Gender {
+  male
+  female
+}
+
+enum Goal {
+  lose_weight
+  build_muscle
+  maintain
+}
+
+enum ExerciseFreq {
+  sedentary
+  light
+  moderate
+  active
+  very_active
+}
+
+enum SubscriptionStatus {
+  inactive
+  active
+  expired
+  cancelled
+}
+
+enum PlanType {
+  monthly
+  yearly
+  lifetime
+}
+
 // 账号表 - 邮箱密码登录
 model Account {
   id        String   @id @default(uuid())
@@ -21,7 +53,7 @@ model Account {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // 关联
-  users User[]
+  user User?
 
   @@map("accounts")
 }
@@ -53,10 +85,10 @@ model QuizSession {
   isCompleted   Boolean   @default(false) @map("is_completed")
 
   // 基础信息 (Step 1)
-  gender        String?   // "male" | "female"
+  gender        Gender?
 
   // 目标 (Step 2)
-  goal          String?   // "lose_weight" | "build_muscle" | "maintain"
+  goal          Goal?
 
   // 身体数据 (Step 3)
   age           Int?
@@ -65,7 +97,7 @@ model QuizSession {
   targetWeight  Float?    @map("target_weight")
 
   // 运动频率 (Step 4)
-  exerciseFreq  String?   @map("exercise_freq") // "sedentary" | "light" | "moderate" | "active" | "very_active"
+  exerciseFreq  ExerciseFreq?   @map("exercise_freq")
 
   // 计算结果 (Step 5完成后)
   bmi           Float?
@@ -84,8 +116,8 @@ model Subscription {
   userId      String   @unique @map("user_id")
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  status      String   @default("inactive") // "inactive" | "active" | "expired" | "cancelled"
-  planType    String?  @map("plan_type")    // "monthly" | "yearly" | "lifetime"
+  status      SubscriptionStatus @default(inactive)
+  planType    PlanType?  @map("plan_type")
 
   startedAt   DateTime? @map("started_at")
   expiresAt   DateTime? @map("expires_at")

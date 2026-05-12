@@ -12,14 +12,11 @@ function generateSessionId(): string {
 // POST /api/session - 创建新用户会话
 export async function POST() {
   try {
-    // 检查环境变量
-    const dbUrl = process.env.DATABASE_URL;
-    
     // 动态导入prisma，避免构建时加载
     const { prisma } = await import('@/lib/prisma');
-    
+
     const sessionId = generateSessionId();
-    
+
     // 创建用户和关联的quiz session、subscription
     const user = await prisma.user.create({
       data: {
@@ -55,13 +52,8 @@ export async function POST() {
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to create session',
+        error: '创建会话失败',
         details: errorMessage,
-        debug: {
-          hasDbUrl: !!process.env.DATABASE_URL,
-          dbUrlPrefix: process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 30) + '...' : 'undefined',
-          nodeEnv: process.env.NODE_ENV,
-        },
       },
       { status: 500 }
     );

@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { calculateHealthMetrics, getBMICategory, UserData } from '@/lib/calculator';
+import {
+  isValidSessionId,
+  isValidExerciseFreq,
+  isValidGender,
+  isValidGoal,
+} from '@/lib/validators';
 
 // 强制动态渲染，避免构建时收集页面数据
 export const dynamic = 'force-dynamic';
@@ -11,13 +17,27 @@ export async function POST(request: NextRequest) {
   try {
     // 动态导入prisma，避免构建时加载
     const { prisma } = await import('@/lib/prisma');
-    
+
     const body = await request.json();
     const { sessionId, data } = body;
 
     if (!sessionId || !data || !data.exerciseFreq) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
+        { success: false, error: '缺少必填字段' },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidSessionId(sessionId)) {
+      return NextResponse.json(
+        { success: false, error: 'Session ID 格式无效' },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidExerciseFreq(data.exerciseFreq)) {
+      return NextResponse.json(
+        { success: false, error: '运动频率参数无效' },
         { status: 400 }
       );
     }
@@ -33,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     if (!user || !user.quizSession) {
       return NextResponse.json(
-        { success: false, error: 'Session not found' },
+        { success: false, error: '会话不存在' },
         { status: 404 }
       );
     }
@@ -41,10 +61,25 @@ export async function POST(request: NextRequest) {
     const quizSession = user.quizSession;
 
     // 检查是否已完成所有必填步骤
-    if (!quizSession.gender || !quizSession.goal || !quizSession.age || 
+    if (!quizSession.gender || !quizSession.goal || !quizSession.age ||
         !quizSession.height || !quizSession.weight || !quizSession.targetWeight) {
       return NextResponse.json(
-        { success: false, error: 'Incomplete quiz data' },
+        { success: false, error: '测评数据不完整' },
+        { status: 400 }
+      );
+    }
+
+    // 防御性验证：从数据库读取的数据也要验证
+    if (!isValidGender(quizSession.gender)) {
+      return NextResponse.json(
+        { success: false, error: '性别数据异常' },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidGoal(quizSession.goal)) {
+      return NextResponse.json(
+        { success: false, error: '目标数据异常' },
         { status: 400 }
       );
     }
@@ -90,7 +125,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Failed to calculate:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to calculate results' },
+      { success: false, error: '计算结果失败' },
       { status: 500 }
     );
   }

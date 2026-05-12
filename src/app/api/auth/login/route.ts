@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { isValidEmail } from '@/lib/validators';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +25,20 @@ export async function POST(request: Request) {
     if (!email || !password) {
       return NextResponse.json(
         { success: false, error: '邮箱和密码不能为空' },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidEmail(email)) {
+      return NextResponse.json(
+        { success: false, error: '邮箱格式无效' },
+        { status: 400 }
+      );
+    }
+
+    if (typeof password !== 'string' || password.length === 0) {
+      return NextResponse.json(
+        { success: false, error: '密码不能为空' },
         { status: 400 }
       );
     }

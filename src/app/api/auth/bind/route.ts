@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isValidUUID, isValidSessionId } from '@/lib/validators';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +11,20 @@ export async function POST(request: Request) {
     if (!token || !sessionId) {
       return NextResponse.json(
         { success: false, error: 'token 和 sessionId 不能为空' },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidUUID(token)) {
+      return NextResponse.json(
+        { success: false, error: 'token 格式无效' },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidSessionId(sessionId)) {
+      return NextResponse.json(
+        { success: false, error: 'Session ID 格式无效' },
         { status: 400 }
       );
     }

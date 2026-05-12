@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import {
+  isValidSessionId,
+  isValidPlanType,
+  validatePaymentAmount,
+} from '@/lib/validators';
 
 // 强制动态渲染，避免构建时收集页面数据
 export const dynamic = 'force-dynamic';
@@ -21,7 +26,7 @@ function generatePaymentId(): string {
 function calculateExpiryDate(planType: string): Date {
   const now = new Date();
   const expiry = new Date(now);
-  
+
   switch (planType) {
     case 'monthly':
       expiry.setMonth(expiry.getMonth() + 1);
@@ -35,7 +40,7 @@ function calculateExpiryDate(planType: string): Date {
     default:
       expiry.setMonth(expiry.getMonth() + 1);
   }
-  
+
   return expiry;
 }
 
@@ -44,17 +49,38 @@ export async function POST(request: NextRequest) {
   try {
     // 动态导入prisma，避免构建时加载
     const { prisma } = await import('@/lib/prisma');
-    
+
     const body: PayRequestBody = await request.json();
 
     if (!body.sessionId || !body.planType || !body.amount) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: sessionId, planType, amount' },
+        { success: false, error: '缺少必填字段：sessionId、planType、amount' },
         { status: 400 }
       );
     }
 
     const { sessionId, planType, amount } = body;
+
+    if (!isValidSessionId(sessionId)) {
+      return NextResponse.json(
+        { success: false, error: 'Session ID 格式无效' },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidPlanType(planType)) {
+      return NextResponse.json(
+        { success: false, error: '订阅计划类型无效' },
+        { status: 400 }
+      );
+    }
+
+    if (!validatePaymentAmount(planType, amount)) {
+      return NextResponse.json(
+        { success: false, error: '支付金额与套餐不匹配' },
+        { status: 400 }
+      );
+    }
 
     // 获取用户
     const user = await prisma.user.findUnique({
@@ -64,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { success: false, error: 'User not found' },
+        { success: false, error: '用户不存在' },
         { status: 404 }
       );
     }
@@ -117,7 +143,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Payment failed:', error);
     return NextResponse.json(
-      { success: false, error: 'Payment processing failed' },
+      { success: false, error: '支付处理失败' },
       { status: 500 }
     );
   }

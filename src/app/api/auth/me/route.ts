@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isValidUUID } from '@/lib/validators';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +12,13 @@ export async function GET(request: Request) {
     if (!token) {
       return NextResponse.json(
         { success: false, error: '缺少 token 参数' },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidUUID(token)) {
+      return NextResponse.json(
+        { success: false, error: 'token 格式无效' },
         { status: 400 }
       );
     }

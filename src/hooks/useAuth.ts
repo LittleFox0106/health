@@ -24,25 +24,48 @@ export function useAuth() {
     isLoading: true,
   });
 
-  // 从 localStorage 初始化
+  // 从 localStorage 初始化，并验证 token 是否仍然有效
   useEffect(() => {
-    try {
-      const token = localStorage.getItem(TOKEN_KEY);
-      const accountStr = localStorage.getItem(ACCOUNT_KEY);
-      const account = accountStr ? JSON.parse(accountStr) : null;
+    const initAuth = async () => {
+      try {
+        const token = localStorage.getItem(TOKEN_KEY);
+        const accountStr = localStorage.getItem(ACCOUNT_KEY);
+        const account = accountStr ? JSON.parse(accountStr) : null;
 
-      setAuth({
-        account,
-        token,
-        isLoading: false,
-      });
-    } catch {
-      setAuth({
-        account: null,
-        token: null,
-        isLoading: false,
-      });
-    }
+        if (token) {
+          // 有 token 时，向后端验证是否仍然有效
+          try {
+            const res = await fetch(`/api/auth/me?token=${token}`);
+            const data = await res.json();
+
+            if (data.success && data.data) {
+              // token 有效，更新 account 信息
+              setAuth({
+                account: data.data,
+                token,
+                isLoading: false,
+              });
+              // 同步更新 localStorage 中的 account
+              localStorage.setItem(ACCOUNT_KEY, JSON.stringify(data.data));
+            } else {
+              // token 无效，清除登录状态
+              localStorage.removeItem(TOKEN_KEY);
+              localStorage.removeItem(ACCOUNT_KEY);
+              setAuth({ account: null, token: null, isLoading: false });
+            }
+          } catch {
+            // 验证请求失败，仍然使用本地缓存的 account
+            setAuth({ account, token, isLoading: false });
+          }
+        } else {
+          setAuth({ account: null, token: null, isLoading: false });
+        }
+      } catch {
+        setAuth({ account: null, token: null, isLoading: false });
+      }
+    };
+
+    initAuth();
   }, []);
 
   // 保存到 localStorage
@@ -93,15 +116,14 @@ export function useAuth() {
     setAuth({ account: null, token: null, isLoading: false });
   }, []);
 
-  // 绑定 session
+  // 绑定 session（使用当前 auth.token）
   const bindSession = useCallback(async (sessionId: string) => {
+    if (!auth.token) return { success: false, message: '未登录' };
+
     const res = await fetch('/api/auth/bind', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${auth.token}`,
-      },
-      body: JSON.stringify({ sessionId }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: auth.token, sessionId }),
     });
     const data = await res.json();
 

@@ -12,6 +12,9 @@ function generateSessionId(): string {
 // POST /api/session - 创建新用户会话
 export async function POST() {
   try {
+    // 检查环境变量
+    const dbUrl = process.env.DATABASE_URL;
+    
     // 动态导入prisma，避免构建时加载
     const { prisma } = await import('@/lib/prisma');
     
@@ -54,6 +57,11 @@ export async function POST() {
         success: false,
         error: 'Failed to create session',
         details: errorMessage,
+        debug: {
+          hasDbUrl: !!process.env.DATABASE_URL,
+          dbUrlPrefix: process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 30) + '...' : 'undefined',
+          nodeEnv: process.env.NODE_ENV,
+        },
       },
       { status: 500 }
     );

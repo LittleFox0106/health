@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     const account = await prisma.account.findUnique({
       where: { id: token },
       include: {
-        user: {
+        users: {
           include: {
             subscription: true,
           },
@@ -36,18 +36,20 @@ export async function GET(request: Request) {
       );
     }
 
+    const user = account.users?.[0];
+
     return NextResponse.json({
       success: true,
       data: {
         id: account.id,
         email: account.email,
         nickname: account.nickname,
-        user: account.user ? {
-          sessionId: account.user.sessionId,
+        user: user ? {
+          sessionId: user.sessionId,
         } : null,
-        subscription: account.user?.subscription ? {
-          status: account.user.subscription.status,
-          planType: account.user.subscription.planType,
+        subscription: user?.subscription ? {
+          status: user.subscription.status,
+          planType: user.subscription.planType,
         } : null,
       },
     });

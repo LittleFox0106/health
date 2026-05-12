@@ -120,8 +120,9 @@ export async function PUT(request: NextRequest) {
     });
   } catch (error) {
     console.error('Failed to update progress:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { success: false, error: 'Failed to update progress' },
+      { success: false, error: 'Failed to update progress', details: errorMessage },
       { status: 500 }
     );
   }

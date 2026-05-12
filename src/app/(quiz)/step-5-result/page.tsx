@@ -3,13 +3,18 @@
 import { useEffect, useState } from 'react';
 import { useSession } from '@/hooks/useSession';
 import { useQuiz } from '@/hooks/useQuiz';
+import { useAuth } from '@/hooks/useAuth';
 import { QuizProgress } from '../components/QuizProgress';
+import { AuthModal } from '@/components/AuthModal';
 
 export default function Step5Result() {
   const { sessionId } = useSession();
   const { result, fullReport, fetchResult, pay, isLoading } = useQuiz({ sessionId });
+  const { account } = useAuth();
   const [isPaid, setIsPaid] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string>('monthly');
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [requireAuth, setRequireAuth] = useState(false);
 
   useEffect(() => {
     if (sessionId) {
@@ -29,11 +34,34 @@ export default function Step5Result() {
       yearly: 199.99,
       lifetime: 499.99,
     };
-    
+
     const success = await pay(selectedPlan as 'monthly' | 'yearly' | 'lifetime', amounts[selectedPlan]);
     if (success) {
       setIsPaid(true);
     }
+  };
+
+  const handlePayClick = () => {
+    if (!account) {
+      setRequireAuth(true);
+      setShowAuthModal(true);
+    } else {
+      handlePay();
+    }
+  };
+
+  const handleAuthSuccess = () => {
+    setShowAuthModal(false);
+    if (requireAuth) {
+      // 登录成功后自动继续付费流程
+      setRequireAuth(false);
+      handlePay();
+    }
+  };
+
+  const handleAuthClose = () => {
+    setShowAuthModal(false);
+    setRequireAuth(false);
   };
 
   const plans = [
@@ -64,7 +92,7 @@ export default function Step5Result() {
     return (
       <div className="space-y-8">
         <QuizProgress currentStep={5} />
-        
+
         <div className="text-center space-y-4">
           <div className="text-6xl mb-4">🎉</div>
           <h1 className="text-3xl font-bold text-gray-900">您的专属健康报告</h1>
@@ -80,7 +108,7 @@ export default function Step5Result() {
             </div>
           </div>
           <div className="mt-4 h-3 bg-gradient-to-r from-blue-200 via-green-200 to-yellow-200 rounded-full relative">
-            <div 
+            <div
               className="absolute top-0 w-3 h-3 bg-blue-600 rounded-full shadow-lg"
               style={{ left: `${Math.min(Math.max((fullReport.bmi / 40) * 100, 0), 100)}%`, transform: 'translateX(-50%)' }}
             ></div>
@@ -124,7 +152,7 @@ export default function Step5Result() {
           <div className="flex items-end justify-between h-40 px-4">
             {fullReport.progressCurve.slice(0, 6).map((point, index) => (
               <div key={index} className="flex flex-col items-center">
-                <div 
+                <div
                   className="w-8 bg-blue-500 rounded-t"
                   style={{ height: `${50 + (index / 5) * 100}%` }}
                 ></div>
@@ -160,7 +188,7 @@ export default function Step5Result() {
   return (
     <div className="space-y-8">
       <QuizProgress currentStep={5} />
-      
+
       <div className="text-center space-y-4">
         <div className="text-6xl mb-4">📊</div>
         <h1 className="text-3xl font-bold text-gray-900">您的健康报告已生成</h1>
@@ -170,7 +198,7 @@ export default function Step5Result() {
       {/* 预览数据 */}
       <div className="bg-white rounded-2xl p-6 shadow-lg">
         <h3 className="text-lg font-semibold text-gray-700 mb-4">报告预览</h3>
-        
+
         {result ? (
           <div className="space-y-4">
             <div className="flex justify-between items-center py-3 border-b">
@@ -205,7 +233,7 @@ export default function Step5Result() {
         <h3 className="text-xl font-bold text-gray-900 text-center mb-6">
           解锁完整报告
         </h3>
-        
+
         <div className="space-y-4 mb-6">
           {plans.map((plan) => (
             <button
@@ -243,7 +271,7 @@ export default function Step5Result() {
         </div>
 
         <button
-          onClick={handlePay}
+          onClick={handlePayClick}
           disabled={isLoading}
           className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-lg
                      disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
@@ -255,6 +283,13 @@ export default function Step5Result() {
           🔒 安全支付 · 支持微信、支付宝
         </p>
       </div>
+
+      {/* 登录弹窗 */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={handleAuthClose}
+        onSuccess={handleAuthSuccess}
+      />
     </div>
   );
 }

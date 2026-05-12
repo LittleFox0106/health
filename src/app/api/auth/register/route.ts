@@ -85,6 +85,7 @@ export async function POST(request: Request) {
           },
         },
       },
+      include: { user: true },
     });
 
     return NextResponse.json({
@@ -96,6 +97,7 @@ export async function POST(request: Request) {
           email: account.email,
           nickname: account.nickname,
         },
+        sessionId: account.user?.sessionId || null,
       },
     });
   } catch (error) {

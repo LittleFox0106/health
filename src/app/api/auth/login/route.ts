@@ -48,6 +48,7 @@ export async function POST(request: Request) {
     // 查找账号
     const account = await prisma.account.findUnique({
       where: { email },
+      include: { user: true },
     });
 
     if (!account) {
@@ -75,6 +76,7 @@ export async function POST(request: Request) {
           email: account.email,
           nickname: account.nickname,
         },
+        sessionId: account.user?.sessionId || null,
       },
     });
   } catch (error) {

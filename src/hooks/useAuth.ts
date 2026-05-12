@@ -47,6 +47,10 @@ export function useAuth() {
               });
               // 同步更新 localStorage 中的 account
               localStorage.setItem(ACCOUNT_KEY, JSON.stringify(data.data));
+              // 如果账号已绑定 session，切换到该 session
+              if (data.data.user?.sessionId) {
+                localStorage.setItem('health_quiz_session', JSON.stringify({ sessionId: data.data.user.sessionId, userId: '' }));
+              }
             } else {
               // token 无效，清除登录状态
               localStorage.removeItem(TOKEN_KEY);
@@ -69,9 +73,13 @@ export function useAuth() {
   }, []);
 
   // 保存到 localStorage
-  const saveAuth = useCallback((token: string, account: Account) => {
+  const saveAuth = useCallback((token: string, account: Account, boundSessionId?: string) => {
     localStorage.setItem(TOKEN_KEY, token);
     localStorage.setItem(ACCOUNT_KEY, JSON.stringify(account));
+    // 如果账号已绑定 session，切换到该 session
+    if (boundSessionId) {
+      localStorage.setItem('health_quiz_session', JSON.stringify({ sessionId: boundSessionId, userId: '' }));
+    }
     setAuth({ account, token, isLoading: false });
   }, []);
 
@@ -85,7 +93,7 @@ export function useAuth() {
     const data = await res.json();
 
     if (data.success && data.data) {
-      saveAuth(data.data.token, data.data.account);
+      saveAuth(data.data.token, data.data.account, data.data.sessionId);
       return { success: true };
     }
 
@@ -102,7 +110,7 @@ export function useAuth() {
     const data = await res.json();
 
     if (data.success && data.data) {
-      saveAuth(data.data.token, data.data.account);
+      saveAuth(data.data.token, data.data.account, data.data.sessionId);
       return { success: true };
     }
 

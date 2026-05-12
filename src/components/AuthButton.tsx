@@ -89,7 +89,10 @@ export function AuthButton() {
       <AuthModal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        onSuccess={() => setShowModal(false)}
+        onSuccess={() => {
+          setShowModal(false);
+          window.location.reload();
+        }}
       />
     </>
   );

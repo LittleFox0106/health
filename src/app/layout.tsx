@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import Link from "next/link";
 import "./globals.css";
 import { AuthButton } from "@/components/AuthButton";
 
@@ -30,7 +31,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <header className="fixed top-0 left-0 right-0 h-14 bg-white shadow-sm z-50 flex items-center justify-between px-6">
-          <span className="text-lg font-bold text-blue-600">健康测评</span>
+          <Link href="/" className="text-lg font-bold text-blue-600 hover:text-blue-700 transition-colors">健康测评</Link>
           <AuthButton />
         </header>
         <div className="pt-14">{children}</div>

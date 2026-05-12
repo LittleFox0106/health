@@ -28,7 +28,6 @@ function calculateExpiryDate(planType: string): Date {
       expiry.setFullYear(expiry.getFullYear() + 1);
       break;
     case 'lifetime':
-      // 终身会员，设置一个遥远的未来日期
       expiry.setFullYear(expiry.getFullYear() + 100);
       break;
     default:
@@ -72,36 +71,31 @@ export async function POST(request: NextRequest) {
     const expiresAt = calculateExpiryDate(planType);
 
     // 更新或创建订阅
-    let subscription;
-    if (user.subscription) {
-      // 更新现有订阅
-      subscription = await prisma.subscription.update({
-        where: { userId: user.id },
-        data: {
-          status: 'active',
-          planType,
-          startedAt: now,
-          expiresAt,
-          paymentId,
-          paidAmount: amount,
-          paidAt: now,
-        },
-      });
-    } else {
-      // 创建新订阅
-      subscription = await prisma.subscription.create({
-        data: {
-          userId: user.id,
-          status: 'active',
-          planType,
-          startedAt: now,
-          expiresAt,
-          paymentId,
-          paidAmount: amount,
-          paidAt: now,
-        },
-      });
-    }
+    const subscription = user.subscription
+      ? await prisma.subscription.update({
+          where: { userId: user.id },
+          data: {
+            status: 'active',
+            planType,
+            startedAt: now,
+            expiresAt,
+            paymentId,
+            paidAmount: amount,
+            paidAt: now,
+          },
+        })
+      : await prisma.subscription.create({
+          data: {
+            userId: user.id,
+            status: 'active',
+            planType,
+            startedAt: now,
+            expiresAt,
+            paymentId,
+            paidAmount: amount,
+            paidAt: now,
+          },
+        });
 
     return NextResponse.json({
       success: true,
@@ -123,4 +117,9 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// 防止GET请求导致构建错误
+export async function GET() {
+  return NextResponse.json({ error: 'Method not allowed' }, { status: 405 });
 }

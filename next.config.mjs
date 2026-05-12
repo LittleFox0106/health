@@ -1,9 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 禁用静态导出，避免构建时收集API路由数据
-  output: 'standalone',
-  
-  // 禁用ESLint在构建时检查（我们已经修复了错误）
+  // 禁用ESLint在构建时检查
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -11,6 +8,11 @@ const nextConfig = {
   // 禁用TypeScript类型检查在构建时
   typescript: {
     ignoreBuildErrors: true,
+  },
+  
+  // 实验性功能：允许动态导入，避免构建时静态分析
+  experimental: {
+    serverComponentsExternalPackages: ['@prisma/client'],
   },
 }
 

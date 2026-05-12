@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     const account = await prisma.account.findUnique({
       where: { id: token },
       include: {
-        users: {
+        user: {
           include: {
             subscription: true,
           },
@@ -44,7 +44,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const user = account.users?.[0];
+    const user = account.user;
 
     return NextResponse.json({
       success: true,

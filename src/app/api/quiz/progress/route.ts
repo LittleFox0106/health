@@ -6,7 +6,7 @@ import { z } from 'zod';
 const updateProgressSchema = z.object({
   sessionId: z.string(),
   step: z.number().min(1).max(5),
-  data: z.record(z.any()),
+  data: z.record(z.unknown()),
 });
 
 // GET /api/quiz/progress?sessionId=xxx - 获取进度
@@ -91,7 +91,8 @@ export async function PUT(request: NextRequest) {
     }
 
     // 构建更新数据
-    const updateData: any = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateData: Record<string, unknown> = {
       currentStep: step,
     };
 

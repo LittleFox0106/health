@@ -109,13 +109,14 @@ export async function GET(request: NextRequest) {
 }
 
 // 生成个性化建议
-function generateRecommendations(quizSession: any): string[] {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function generateRecommendations(quizSession: Record<string, unknown>): string[] {
   const recommendations: string[] = [];
   
   if (!quizSession) return recommendations;
 
   // 基于BMI的建议
-  const bmi = quizSession.bmi || 0;
+  const bmi = (quizSession.bmi as number) || 0;
   if (bmi < 18.5) {
     recommendations.push('您的BMI偏低，建议增加营养摄入，配合力量训练增加肌肉量。');
   } else if (bmi >= 25) {
@@ -125,7 +126,7 @@ function generateRecommendations(quizSession: any): string[] {
   }
 
   // 基于目标的建议
-  const goal = quizSession.goal;
+  const goal = quizSession.goal as string;
   if (goal === 'lose_weight') {
     recommendations.push('建议每周进行3-5次有氧运动，每次30-60分钟。');
     recommendations.push('控制饮食中的碳水化合物摄入，增加蛋白质比例。');
@@ -135,7 +136,7 @@ function generateRecommendations(quizSession: any): string[] {
   }
 
   // 基于运动频率的建议
-  const exerciseFreq = quizSession.exerciseFreq;
+  const exerciseFreq = quizSession.exerciseFreq as string;
   if (exerciseFreq === 'sedentary') {
     recommendations.push('您目前的运动量较少，建议从每天步行30分钟开始。');
   } else if (exerciseFreq === 'very_active') {

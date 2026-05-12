@@ -48,10 +48,12 @@ export async function POST() {
     });
   } catch (error) {
     console.error('Failed to create session:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
       {
         success: false,
         error: 'Failed to create session',
+        details: errorMessage,
       },
       { status: 500 }
     );

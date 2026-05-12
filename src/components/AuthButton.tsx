@@ -64,6 +64,7 @@ export function AuthButton() {
               onClick={() => {
                 setShowDropdown(false);
                 logout();
+                window.location.href = '/';
               }}
               className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors"
             >

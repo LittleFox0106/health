@@ -1,16 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { getBMICategory, generateProgressCurve } from '@/lib/calculator';
+import { isValidSessionId } from '@/lib/validators';
+
+// 强制动态渲染，避免构建时收集页面数据
+export const dynamic = 'force-dynamic';
 
 // GET /api/quiz/result?sessionId=xxx - 获取结果（带权限校验）
 export async function GET(request: NextRequest) {
   try {
+    // 动态导入prisma，避免构建时加载
+    const { prisma } = await import('@/lib/prisma');
+
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get('sessionId');
 
-    if (!sessionId) {
+    if (!sessionId || !isValidSessionId(sessionId)) {
       return NextResponse.json(
-        { success: false, error: 'Session ID is required' },
+        { success: false, error: 'Session ID 格式无效' },
         { status: 400 }
       );
     }
@@ -25,7 +31,7 @@ export async function GET(request: NextRequest) {
 
     if (!user || !user.quizSession) {
       return NextResponse.json(
-        { success: false, error: 'Session not found' },
+        { success: false, error: '会话不存在' },
         { status: 404 }
       );
     }
@@ -36,7 +42,7 @@ export async function GET(request: NextRequest) {
     // 检查是否已完成测评
     if (!quizSession.isCompleted) {
       return NextResponse.json(
-        { success: false, error: 'Quiz not completed' },
+        { success: false, error: '测评尚未完成' },
         { status: 400 }
       );
     }
@@ -71,7 +77,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 会员：返回完整数据
-    const daysToGoal = quizSession.targetDate 
+    const daysToGoal = quizSession.targetDate
       ? Math.ceil((quizSession.targetDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
       : 0;
 
@@ -102,20 +108,21 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Failed to get result:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to get result' },
+      { success: false, error: '获取结果失败' },
       { status: 500 }
     );
   }
 }
 
 // 生成个性化建议
-function generateRecommendations(quizSession: any): string[] {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function generateRecommendations(quizSession: Record<string, unknown>): string[] {
   const recommendations: string[] = [];
-  
+
   if (!quizSession) return recommendations;
 
   // 基于BMI的建议
-  const bmi = quizSession.bmi || 0;
+  const bmi = (quizSession.bmi as number) || 0;
   if (bmi < 18.5) {
     recommendations.push('您的BMI偏低，建议增加营养摄入，配合力量训练增加肌肉量。');
   } else if (bmi >= 25) {
@@ -125,7 +132,7 @@ function generateRecommendations(quizSession: any): string[] {
   }
 
   // 基于目标的建议
-  const goal = quizSession.goal;
+  const goal = quizSession.goal as string;
   if (goal === 'lose_weight') {
     recommendations.push('建议每周进行3-5次有氧运动，每次30-60分钟。');
     recommendations.push('控制饮食中的碳水化合物摄入，增加蛋白质比例。');
@@ -135,7 +142,7 @@ function generateRecommendations(quizSession: any): string[] {
   }
 
   // 基于运动频率的建议
-  const exerciseFreq = quizSession.exerciseFreq;
+  const exerciseFreq = quizSession.exerciseFreq as string;
   if (exerciseFreq === 'sedentary') {
     recommendations.push('您目前的运动量较少，建议从每天步行30分钟开始。');
   } else if (exerciseFreq === 'very_active') {

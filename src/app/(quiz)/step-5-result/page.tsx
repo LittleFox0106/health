@@ -3,13 +3,18 @@
 import { useEffect, useState } from 'react';
 import { useSession } from '@/hooks/useSession';
 import { useQuiz } from '@/hooks/useQuiz';
+import { useAuth } from '@/hooks/useAuth';
 import { QuizProgress } from '../components/QuizProgress';
+import { AuthModal } from '@/components/AuthModal';
 
 export default function Step5Result() {
   const { sessionId } = useSession();
   const { result, fullReport, fetchResult, pay, isLoading } = useQuiz({ sessionId });
+  const { account, bindSession } = useAuth();
   const [isPaid, setIsPaid] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string>('monthly');
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [requireAuth, setRequireAuth] = useState(false);
 
   useEffect(() => {
     if (sessionId) {
@@ -29,11 +34,40 @@ export default function Step5Result() {
       yearly: 199.99,
       lifetime: 499.99,
     };
-    
-    const success = await pay(selectedPlan as any, amounts[selectedPlan]);
+
+    const success = await pay(selectedPlan as 'monthly' | 'yearly' | 'lifetime', amounts[selectedPlan]);
     if (success) {
       setIsPaid(true);
     }
+  };
+
+  const handlePayClick = () => {
+    if (!account) {
+      setRequireAuth(true);
+      setShowAuthModal(true);
+    } else {
+      handlePay();
+    }
+  };
+
+  const handleAuthSuccess = () => {
+    setShowAuthModal(false);
+    // 登录成功后，将当前匿名 session 绑定到账号
+    if (sessionId) {
+      bindSession(sessionId).catch(() => {
+        // 绑定失败不影响主流程
+      });
+    }
+    if (requireAuth) {
+      // 登录成功后自动继续付费流程
+      setRequireAuth(false);
+      handlePay();
+    }
+  };
+
+  const handleAuthClose = () => {
+    setShowAuthModal(false);
+    setRequireAuth(false);
   };
 
   const plans = [
@@ -64,7 +98,7 @@ export default function Step5Result() {
     return (
       <div className="space-y-8">
         <QuizProgress currentStep={5} />
-        
+
         <div className="text-center space-y-4">
           <div className="text-6xl mb-4">🎉</div>
           <h1 className="text-3xl font-bold text-gray-900">您的专属健康报告</h1>
@@ -80,7 +114,7 @@ export default function Step5Result() {
             </div>
           </div>
           <div className="mt-4 h-3 bg-gradient-to-r from-blue-200 via-green-200 to-yellow-200 rounded-full relative">
-            <div 
+            <div
               className="absolute top-0 w-3 h-3 bg-blue-600 rounded-full shadow-lg"
               style={{ left: `${Math.min(Math.max((fullReport.bmi / 40) * 100, 0), 100)}%`, transform: 'translateX(-50%)' }}
             ></div>
@@ -121,17 +155,115 @@ export default function Step5Result() {
         {/* 进度曲线 */}
         <div className="bg-white rounded-2xl p-6 shadow-lg">
           <h3 className="text-lg font-semibold text-gray-700 mb-4">目标进度预测</h3>
-          <div className="flex items-end justify-between h-40 px-4">
-            {fullReport.progressCurve.slice(0, 6).map((point, index) => (
-              <div key={index} className="flex flex-col items-center">
-                <div 
-                  className="w-8 bg-blue-500 rounded-t"
-                  style={{ height: `${50 + (index / 5) * 100}%` }}
-                ></div>
-                <div className="text-xs text-gray-500 mt-2">第{point.day}天</div>
+          {fullReport.progressCurve && fullReport.progressCurve.length > 1 ? (() => {
+            const data = fullReport.progressCurve;
+            const weights = data.map(p => p.weight);
+            const minW = Math.min(...weights);
+            const maxW = Math.max(...weights);
+            const range = maxW - minW || 1;
+            const padding = { top: 20, right: 20, bottom: 40, left: 45 };
+            const chartW = 500;
+            const chartH = 200;
+            const innerW = chartW - padding.left - padding.right;
+            const innerH = chartH - padding.top - padding.bottom;
+
+            const points = data.map((p, i) => ({
+              x: padding.left + (i / (data.length - 1)) * innerW,
+              y: padding.top + (1 - (p.weight - minW) / range) * innerH,
+              ...p,
+            }));
+
+            const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+            const areaPath = linePath + ` L${points[points.length - 1].x},${padding.top + innerH} L${points[0].x},${padding.top + innerH} Z`;
+
+            // Y轴刻度
+            const yTicks = 5;
+            const yTickValues = Array.from({ length: yTicks + 1 }, (_, i) => minW + (range * i) / yTicks);
+
+            // X轴标签（取6个均匀分布的点）
+            const xLabelIndices = data.length <= 8 
+              ? data.map((_, i) => i)
+              : Array.from({ length: 6 }, (_, i) => Math.round(i * (data.length - 1) / 5));
+
+            const formatDay = (day: number) => {
+              if (day === 0) return '今天';
+              if (day <= 7) return `第${day}天`;
+              if (day <= 30) return `${Math.ceil(day / 7)}周`;
+              return `${Math.round(day / 30)}月`;
+            };
+
+            return (
+              <div className="w-full overflow-x-auto">
+                <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full h-auto" style={{ minWidth: '300px' }}>
+                  <defs>
+                    <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3" />
+                      <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.02" />
+                    </linearGradient>
+                    <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#3b82f6" />
+                      <stop offset="100%" stopColor="#6366f1" />
+                    </linearGradient>
+                  </defs>
+
+                  {/* Y轴网格线 */}
+                  {yTickValues.map((val, i) => {
+                    const y = padding.top + (1 - (val - minW) / range) * innerH;
+                    return (
+                      <g key={i}>
+                        <line x1={padding.left} y1={y} x2={chartW - padding.right} y2={y} stroke="#e5e7eb" strokeDasharray={i === 0 ? '0' : '4'} />
+                        <text x={padding.left - 8} y={y + 4} textAnchor="end" fill="#9ca3af" fontSize="10">{val.toFixed(1)}</text>
+                      </g>
+                    );
+                  })}
+
+                  {/* 面积 */}
+                  <path d={areaPath} fill="url(#areaGradient)" />
+
+                  {/* 折线 */}
+                  <path d={linePath} fill="none" stroke="url(#lineGradient)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+
+                  {/* 数据点 */}
+                  {points.map((p, i) => (
+                    <circle key={i} cx={p.x} cy={p.y} r="3" fill="white" stroke="#3b82f6" strokeWidth="2" />
+                  ))}
+
+                  {/* 起点和终点高亮 */}
+                  <circle cx={points[0].x} cy={points[0].y} r="5" fill="#3b82f6" />
+                  <circle cx={points[points.length - 1].x} cy={points[points.length - 1].y} r="5" fill="#6366f1" />
+                  
+                  {/* 起点标签 */}
+                  <text x={points[0].x} y={points[0].y - 10} textAnchor="middle" fill="#3b82f6" fontSize="11" fontWeight="600">{weights[0].toFixed(1)}kg</text>
+                  {/* 终点标签 */}
+                  <text x={points[points.length - 1].x} y={points[points.length - 1].y - 10} textAnchor="middle" fill="#6366f1" fontSize="11" fontWeight="600">{weights[weights.length - 1].toFixed(1)}kg</text>
+
+                  {/* X轴标签 */}
+                  {xLabelIndices.map((idx) => {
+                    const p = points[idx];
+                    return (
+                      <text key={idx} x={p.x} y={chartH - 8} textAnchor="middle" fill="#9ca3af" fontSize="10">{formatDay(data[idx].day)}</text>
+                    );
+                  })}
+                </svg>
+                <div className="flex items-center justify-center space-x-4 mt-2">
+                  <div className="flex items-center space-x-1.5">
+                    <div className="w-3 h-0.5 bg-blue-500 rounded"></div>
+                    <span className="text-xs text-gray-500">体重变化趋势</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                    <span className="text-xs text-gray-500">起点 {weights[0].toFixed(1)}kg</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                    <span className="text-xs text-gray-500">目标 {weights[weights.length - 1].toFixed(1)}kg</span>
+                  </div>
+                </div>
               </div>
-            ))}
-          </div>
+            );
+          })() : (
+            <p className="text-gray-400 text-center py-8">暂无进度数据</p>
+          )}
         </div>
 
         {/* 个性化建议 */}
@@ -160,7 +292,7 @@ export default function Step5Result() {
   return (
     <div className="space-y-8">
       <QuizProgress currentStep={5} />
-      
+
       <div className="text-center space-y-4">
         <div className="text-6xl mb-4">📊</div>
         <h1 className="text-3xl font-bold text-gray-900">您的健康报告已生成</h1>
@@ -170,7 +302,7 @@ export default function Step5Result() {
       {/* 预览数据 */}
       <div className="bg-white rounded-2xl p-6 shadow-lg">
         <h3 className="text-lg font-semibold text-gray-700 mb-4">报告预览</h3>
-        
+
         {result ? (
           <div className="space-y-4">
             <div className="flex justify-between items-center py-3 border-b">
@@ -205,7 +337,7 @@ export default function Step5Result() {
         <h3 className="text-xl font-bold text-gray-900 text-center mb-6">
           解锁完整报告
         </h3>
-        
+
         <div className="space-y-4 mb-6">
           {plans.map((plan) => (
             <button
@@ -243,7 +375,7 @@ export default function Step5Result() {
         </div>
 
         <button
-          onClick={handlePay}
+          onClick={handlePayClick}
           disabled={isLoading}
           className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-lg
                      disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
@@ -255,6 +387,13 @@ export default function Step5Result() {
           🔒 安全支付 · 支持微信、支付宝
         </p>
       </div>
+
+      {/* 登录弹窗 */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={handleAuthClose}
+        onSuccess={handleAuthSuccess}
+      />
     </div>
   );
 }

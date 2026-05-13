@@ -30,7 +30,7 @@ export function useQuiz({ sessionId }: UseQuizProps) {
       } else {
         setError(data.error);
       }
-    } catch (err) {
+    } catch {
       setError('Failed to fetch progress');
     } finally {
       setIsLoading(false);
@@ -60,7 +60,7 @@ export function useQuiz({ sessionId }: UseQuizProps) {
         setError(result.error);
         return false;
       }
-    } catch (err) {
+    } catch {
       setError('Failed to update progress');
       return false;
     } finally {
@@ -91,7 +91,7 @@ export function useQuiz({ sessionId }: UseQuizProps) {
         setError(data.error);
         return false;
       }
-    } catch (err) {
+    } catch {
       setError('Failed to calculate');
       return false;
     } finally {
@@ -119,7 +119,7 @@ export function useQuiz({ sessionId }: UseQuizProps) {
       } else {
         setError(data.error);
       }
-    } catch (err) {
+    } catch {
       setError('Failed to fetch result');
     } finally {
       setIsLoading(false);
@@ -150,7 +150,7 @@ export function useQuiz({ sessionId }: UseQuizProps) {
         setError(data.error);
         return false;
       }
-    } catch (err) {
+    } catch {
       setError('Payment failed');
       return false;
     } finally {

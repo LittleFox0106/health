@@ -6,20 +6,39 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// 账号表 - 邮箱密码登录
+model Account {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // 存储加密后的密码
+  nickname  String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // 关联（一对一）
+  user User?
+
+  @@map("accounts")
 }
 
 // 用户表 - 基于匿名Session
 model User {
   id          String   @id @default(uuid())
   sessionId   String   @unique @map("session_id")
+  accountId   String?  @unique @map("account_id")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  
+
   // 关联
-  quizSession QuizSession?
+  account      Account?       @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  quizSession  QuizSession?
   subscription Subscription?
-  
+
   @@map("users")
 }
 
@@ -28,34 +47,34 @@ model QuizSession {
   id            String    @id @default(uuid())
   userId        String    @unique @map("user_id")
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   // 进度追踪
-  currentStep   Int       @default(1) @map("current_step") // 1-5
+  currentStep   Int       @default(1) @map("current_step")
   isCompleted   Boolean   @default(false) @map("is_completed")
-  
+
   // 基础信息 (Step 1)
-  gender        String?   // "male" | "female"
-  
+  gender        String?
+
   // 目标 (Step 2)
-  goal          String?   // "lose_weight" | "build_muscle" | "maintain"
-  
+  goal          String?
+
   // 身体数据 (Step 3)
   age           Int?
-  height        Int?      // cm
-  weight        Float?    // kg
+  height        Int?
+  weight        Float?
   targetWeight  Float?    @map("target_weight")
-  
+
   // 运动频率 (Step 4)
-  exerciseFreq  String?   @map("exercise_freq") // "sedentary" | "light" | "moderate" | "active" | "very_active"
-  
+  exerciseFreq  String?   @map("exercise_freq")
+
   // 计算结果 (Step 5完成后)
   bmi           Float?
   dailyCalories Int?      @map("daily_calories")
   targetDate    DateTime? @map("target_date")
-  
+
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
-  
+
   @@map("quiz_sessions")
 }
 
@@ -64,20 +83,20 @@ model Subscription {
   id          String   @id @default(uuid())
   userId      String   @unique @map("user_id")
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  status      String   @default("inactive") // "inactive" | "active" | "expired" | "cancelled"
-  planType    String?  @map("plan_type")    // "monthly" | "yearly" | "lifetime"
-  
+
+  status      String   @default("inactive")
+  planType    String?  @map("plan_type")
+
   startedAt   DateTime? @map("started_at")
   expiresAt   DateTime? @map("expires_at")
-  
+
   // 支付相关
-  paymentId   String?  @map("payment_id")   // 模拟支付ID
+  paymentId   String?  @map("payment_id")
   paidAmount  Float?   @map("paid_amount")
   paidAt      DateTime? @map("paid_at")
-  
+
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  
+
   @@map("subscriptions")
 }

@@ -1,37 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { z } from 'zod';
+import {
+  isValidSessionId,
+  isValidStep,
+  isValidGender,
+  isValidGoal,
+  isValidAge,
+  isValidHeight,
+  isValidWeight,
+  isValidExerciseFreq,
+} from '@/lib/validators';
 
-// 验证schema
-const updateProgressSchema = z.object({
-  sessionId: z.string(),
-  step: z.number().min(1).max(5),
-  data: z.record(z.any()),
-});
+// 强制动态渲染，避免构建时收集页面数据
+export const dynamic = 'force-dynamic';
 
 // GET /api/quiz/progress?sessionId=xxx - 获取进度
 export async function GET(request: NextRequest) {
   try {
+    // 动态导入prisma，避免构建时加载
+    const { prisma } = await import('@/lib/prisma');
+
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get('sessionId');
 
-    if (!sessionId) {
+    if (!sessionId || !isValidSessionId(sessionId)) {
       return NextResponse.json(
-        { success: false, error: 'Session ID is required' },
+        { success: false, error: 'Session ID 格式无效' },
         { status: 400 }
       );
     }
 
     const user = await prisma.user.findUnique({
       where: { sessionId },
-      include: {
-        quizSession: true,
-      },
+      include: { quizSession: true },
     });
 
     if (!user || !user.quizSession) {
       return NextResponse.json(
-        { success: false, error: 'Session not found' },
+        { success: false, error: '会话不存在' },
         { status: 404 }
       );
     }
@@ -57,7 +62,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Failed to get progress:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to get progress' },
+      { success: false, error: '获取进度失败' },
       { status: 500 }
     );
   }
@@ -66,17 +71,87 @@ export async function GET(request: NextRequest) {
 // PUT /api/quiz/progress - 更新进度
 export async function PUT(request: NextRequest) {
   try {
-    const body = await request.json();
-    const validation = updateProgressSchema.safeParse(body);
+    // 动态导入prisma，避免构建时加载
+    const { prisma } = await import('@/lib/prisma');
 
-    if (!validation.success) {
+    const body = await request.json();
+    const { sessionId, step, data } = body;
+
+    if (!sessionId || !step || !data) {
       return NextResponse.json(
-        { success: false, error: 'Invalid request data', details: validation.error },
+        { success: false, error: '缺少必填字段' },
         { status: 400 }
       );
     }
 
-    const { sessionId, step, data } = validation.data;
+    if (!isValidSessionId(sessionId)) {
+      return NextResponse.json(
+        { success: false, error: 'Session ID 格式无效' },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidStep(step)) {
+      return NextResponse.json(
+        { success: false, error: '步骤参数无效，必须为1-5的整数' },
+        { status: 400 }
+      );
+    }
+
+    // 根据步骤验证对应字段
+    if (step === 1 && data.gender !== undefined) {
+      if (!isValidGender(data.gender)) {
+        return NextResponse.json(
+          { success: false, error: '性别参数无效' },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (step === 2 && data.goal !== undefined) {
+      if (!isValidGoal(data.goal)) {
+        return NextResponse.json(
+          { success: false, error: '目标参数无效' },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (step === 3) {
+      if (data.age !== undefined && !isValidAge(data.age)) {
+        return NextResponse.json(
+          { success: false, error: '年龄参数无效，必须为1-150的整数' },
+          { status: 400 }
+        );
+      }
+      if (data.height !== undefined && !isValidHeight(data.height)) {
+        return NextResponse.json(
+          { success: false, error: '身高参数无效，必须为50-300的整数' },
+          { status: 400 }
+        );
+      }
+      if (data.weight !== undefined && !isValidWeight(data.weight)) {
+        return NextResponse.json(
+          { success: false, error: '体重参数无效' },
+          { status: 400 }
+        );
+      }
+      if (data.targetWeight !== undefined && !isValidWeight(data.targetWeight)) {
+        return NextResponse.json(
+          { success: false, error: '目标体重参数无效' },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (step === 4 && data.exerciseFreq !== undefined) {
+      if (!isValidExerciseFreq(data.exerciseFreq)) {
+        return NextResponse.json(
+          { success: false, error: '运动频率参数无效' },
+          { status: 400 }
+        );
+      }
+    }
 
     const user = await prisma.user.findUnique({
       where: { sessionId },
@@ -85,13 +160,14 @@ export async function PUT(request: NextRequest) {
 
     if (!user || !user.quizSession) {
       return NextResponse.json(
-        { success: false, error: 'Session not found' },
+        { success: false, error: '会话不存在' },
         { status: 404 }
       );
     }
 
     // 构建更新数据
-    const updateData: any = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateData: Record<string, unknown> = {
       currentStep: step,
     };
 
@@ -123,8 +199,9 @@ export async function PUT(request: NextRequest) {
     });
   } catch (error) {
     console.error('Failed to update progress:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { success: false, error: 'Failed to update progress' },
+      { success: false, error: '更新进度失败', details: errorMessage },
       { status: 500 }
     );
   }

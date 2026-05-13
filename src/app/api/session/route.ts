@@ -1,6 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { NextResponse } from 'next/server';
 import crypto from 'crypto';
+
+// 强制动态渲染，避免构建时收集页面数据
+export const dynamic = 'force-dynamic';
 
 // 生成唯一的session ID
 function generateSessionId(): string {
@@ -10,8 +12,11 @@ function generateSessionId(): string {
 // POST /api/session - 创建新用户会话
 export async function POST() {
   try {
+    // 动态导入prisma，避免构建时加载
+    const { prisma } = await import('@/lib/prisma');
+
     const sessionId = generateSessionId();
-    
+
     // 创建用户和关联的quiz session、subscription
     const user = await prisma.user.create({
       data: {
@@ -43,10 +48,12 @@ export async function POST() {
     });
   } catch (error) {
     console.error('Failed to create session:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to create session',
+        error: '创建会话失败',
+        details: errorMessage,
       },
       { status: 500 }
     );

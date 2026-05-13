@@ -48,7 +48,7 @@ export default function Step4Exercise() {
   const handleContinue = async () => {
     if (!selectedFreq) return;
     
-    const success = await calculate(selectedFreq as any);
+    const success = await calculate(selectedFreq as 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active');
     if (success) {
       router.push('/step-5-result');
     }

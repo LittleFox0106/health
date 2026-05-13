@@ -2,6 +2,13 @@
 
 基于 Next.js 14 + TypeScript + Prisma + Supabase PostgreSQL 的全栈健康测评应用。用户通过 5 步渐进式测评获取个性化健康方案，支持匿名测评与账号绑定，包含模拟支付与会员权限体系。
 
+## 📚 项目文档
+
+| 文档 | 路径 | 说明 |
+|------|------|------|
+| **API 文档** | [`health-fix/API-DOC.md`](./health-fix/API-DOC.md) | 完整的 API 接口文档，包含 cURL 示例、测试脚本、付费/未付费响应对比 |
+| **AI 使用复盘** | [`health-fix/AI-使用复盘.docx`](./health-fix/AI-使用复盘.docx) | 记录项目开发过程中 AI 工具的使用方法和经验总结 |
+
 ## 线上演示
 
 **演示地址**：[https://health-b9skr32zl-littlefox0106s-projects.vercel.app/](https://health-b9skr32zl-littlefox0106s-projects.vercel.app/)
